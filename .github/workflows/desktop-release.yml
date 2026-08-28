@@ -136,7 +136,13 @@ jobs:
               Select-Object -First 1
           }
           if ($null -eq $runtime) { throw 'Installed desktop app did not start its packaged runtime' }
-          $desktop.CloseMainWindow() | Out-Null
+          for ($attempt = 0; $attempt -lt 60; $attempt++) {
+            $desktop.Refresh()
+            if ($desktop.MainWindowHandle -ne 0) { break }
+            Start-Sleep -Milliseconds 500
+          }
+          if ($desktop.MainWindowHandle -eq 0) { throw 'Installed desktop app did not create its main window' }
+          if (-not $desktop.CloseMainWindow()) { throw 'Installed desktop main window did not accept close' }
           if (-not $desktop.WaitForExit(15000)) { Stop-Process -Id $desktop.Id -Force }
           for ($attempt = 0; $attempt -lt 20; $attempt++) {
             if ($null -eq (Get-Process -Id $runtime.ProcessId -ErrorAction SilentlyContinue)) { break }

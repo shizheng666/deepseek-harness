@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-desktop",
   "description": "Private Windows desktop deployment for the DeepSeek Harness Web application",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc -b && tsdown",
     "build:icon": "node scripts/build-icon.mjs",
-    "dist:win": "electron-builder --win nsis --x64 --publish never",
+    "dist:win": "node scripts/build-windows.mjs",
     "test": "vitest run --root ../.. apps/desktop/tests"
   },
   "dependencies": {

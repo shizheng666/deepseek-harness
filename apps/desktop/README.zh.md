@@ -6,7 +6,7 @@ DeepSeek Harness Desktop 是现有 Web 应用的 Windows x64 桌面发行版。�
 
 ## 安装与运行
 
-从公开的 [`shizheng666/deepseek-harness` Releases](https://github.com/shizheng666/deepseek-harness/releases) 下载 `DeepSeek-Harness-Desktop-Setup-<version>-x64.exe`，再运行面向当前用户的一键安装程序。`0.1.0` 版本未签名，因此 Windows SmartScreen 可能显示“未知发布者”警告。选择继续之前，请先确认下载来源。
+从公开的 [`shizheng666/deepseek-harness` Releases](https://github.com/shizheng666/deepseek-harness/releases) 下载 `DeepSeek-Harness-Desktop-Setup-<version>-x64.exe`，再运行面向当前用户的一键安装程序。首个公开版本 `0.1.1` 未签名，因此 Windows SmartScreen 可能显示“未知发布者”警告。选择继续之前，请先确认下载来源。
 
 应用会把随附运行时启动为 `dsh web --no-open --port 0 --supervised`，并在启用沙箱的 Electron 窗口中加载已认证的回环页面。它使用普通 Harness home，不覆盖 `DSH_HOME`，因此 CLI 与桌面应用共享设置、凭据、profile 和会话。同一时间只运行一个桌面实例。
 
@@ -38,6 +38,6 @@ pnpm --filter @deepseek-ai/dsh-desktop build
 pnpm --filter @deepseek-ai/dsh-desktop build:icon
 ```
 
-Windows 工作流拥有可分发构建。它会构建正式 workspace、创建 Windows x64 独立运行时、运行运行时冒烟测试、暂存 `dsh-runtime.exe` 及其 ripgrep 伴随文件、构建 NSIS 目标、校验更新元数据，并验证静默安装、启动、进程清理和卸载。`0.1.0` 版本会明确忽略签名输入；后续版本使用可选的 `WINDOWS_CSC_LINK` 与 `WINDOWS_CSC_KEY_PASSWORD` 仓库 secret。Pull Request 与手动运行只上传临时产物，不创建 Release；只有公开 fork 中的 `desktop-v*` 标签会发布 Release。
+Windows 工作流拥有可分发构建。它会构建正式 workspace、创建 Windows x64 独立运行时、运行运行时冒烟测试、暂存 `dsh-runtime.exe` 及其 ripgrep 伴随文件、构建 NSIS 目标、校验更新元数据，并验证静默安装、启动、进程清理和卸载。没有配置 `WINDOWS_CSC_LINK` 的构建保持未签名；后续 Release 可以使用 `WINDOWS_CSC_LINK` 与 `WINDOWS_CSC_KEY_PASSWORD` 仓库 secret。Pull Request 与手动运行只上传临时产物，不创建 Release；只有公开 fork 中的 `desktop-v*` 标签会发布 Release。
 
 在 Windows 上进行本地 Electron 开发时，先构建 workspace 与独立运行时；仅在运行时不位于默认路径时设置 `DSH_DESKTOP_RUNTIME_PATH`。桌面进程只在内存中保存运行时 token，并从诊断信息中脱敏；它只接受宣告的 `http://127.0.0.1:<port>/` origin，拒绝权限请求与其他导航，并通过系统浏览器打开外部 HTTPS 链接。应用不提供 renderer、preload 或桌面 IPC API。

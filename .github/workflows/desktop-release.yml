@@ -100,7 +100,7 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
         run: |
           $version = node -p "require('./apps/desktop/package.json').version"
-          if ($version -eq '0.1.0') {
+          if ([string]::IsNullOrWhiteSpace($env:CSC_LINK)) {
             Remove-Item Env:CSC_LINK -ErrorAction SilentlyContinue
             Remove-Item Env:CSC_KEY_PASSWORD -ErrorAction SilentlyContinue
           }

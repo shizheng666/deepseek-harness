@@ -18,7 +18,7 @@ Electron 窗口直接加载本地已认证 HTTP 表层。它启用沙箱并关�
 
 打包版在成功启动后检查一次公开的 `shizheng666/deepseek-harness` GitHub Release feed。更高版本会在后台下载；下载后由用户选择立即重启安装，或在正常退出时安装。手动检查会暴露错误，自动检查失败则不阻塞应用。Release 使用不可变的 `desktop-v<version>` 标签，其版本必须与 `apps/desktop/package.json` 完全一致；Windows 工作流发布 NSIS 安装程序、blockmap 与 `latest.yml`。桌面 manifest 被排除在 npm 发布家族与版本一致性检查之外。
 
-SEA 部署会改变 pnpm 记录的依赖模式。Windows 工作流会在 electron-builder 收集生产模块时保留完整安装，不允许 pnpm 提前裁掉 builder 本身。仓库钩子安装器也会先检查 CI，再导入仅用于开发的 Lefthook 包，使其他场景的纯生产依赖同步可以省略开发依赖，同时不削弱本地正常安装钩子的行为。
+SEA 部署会改变 pnpm 记录的依赖模式，并可能从 workspace 删除开发依赖。Windows 工作流会在暂存运行时后根据冻结锁文件恢复完整安装，然后在 electron-builder 收集生产模块时保持该安装，不允许 pnpm 提前裁掉 builder 本身。仓库钩子安装器也会先检查 CI，再导入仅用于开发的 Lefthook 包，使其他场景的纯生产依赖同步可以省略开发依赖，同时不削弱本地正常安装钩子的行为。
 
 首个公开的 `0.1.1` 安装程序未签名，可能显示 Windows SmartScreen“未知发布者”警告。Builder 配置与 electron-builder 标准 CI 签名环境保持兼容，因此后续 Release 可以加入基于证书的签名，而无需更改打包方式或更新通道。
 

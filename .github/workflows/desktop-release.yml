@@ -87,6 +87,9 @@ jobs:
           Copy-Item -LiteralPath $runtime apps/desktop/resources/runtime/dsh-runtime.exe
           Copy-Item -LiteralPath $ripgrep apps/desktop/resources/runtime/dsh-runtime-rg.exe
 
+      - name: Restore immutable workspace after runtime deployment
+        run: pnpm install --frozen-lockfile
+
       - name: Verify deterministic icon
         shell: pwsh
         run: |
@@ -104,8 +107,8 @@ jobs:
             Remove-Item Env:CSC_LINK -ErrorAction SilentlyContinue
             Remove-Item Env:CSC_KEY_PASSWORD -ErrorAction SilentlyContinue
           }
-          # SEA deployment changes pnpm's recorded dependency mode. Keep the complete
-          # installation intact while electron-builder collects production modules.
+          # Keep the restored installation intact while electron-builder collects
+          # production modules.
           pnpm --config.verify-deps-before-run=warn --filter @deepseek-ai/dsh-desktop dist:win
 
       - name: Validate update artifacts

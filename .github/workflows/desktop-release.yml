@@ -104,7 +104,9 @@ jobs:
             Remove-Item Env:CSC_LINK -ErrorAction SilentlyContinue
             Remove-Item Env:CSC_KEY_PASSWORD -ErrorAction SilentlyContinue
           }
-          pnpm --filter @deepseek-ai/dsh-desktop dist:win
+          # SEA deployment changes pnpm's recorded dependency mode. Keep the complete
+          # installation intact while electron-builder collects production modules.
+          pnpm --config.verify-deps-before-run=warn --filter @deepseek-ai/dsh-desktop dist:win
 
       - name: Validate update artifacts
         shell: pwsh

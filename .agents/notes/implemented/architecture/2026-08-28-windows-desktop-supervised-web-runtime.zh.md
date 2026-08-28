@@ -20,7 +20,7 @@ Electron 窗口直接加载本地已认证 HTTP 表层。它启用沙箱并关�
 
 SEA 部署会改变 pnpm 记录的依赖模式，并可能从 workspace 删除开发依赖。Windows 工作流会在暂存运行时后根据冻结锁文件恢复完整安装，然后在 electron-builder 收集生产模块时保持该安装，不允许 pnpm 提前裁掉 builder 本身。仓库钩子安装器也会先检查 CI，再导入仅用于开发的 Lefthook 包，使其他场景的纯生产依赖同步可以省略开发依赖，同时不削弱本地正常安装钩子的行为。
 
-首个公开的 `0.1.1` 安装程序未签名，可能显示 Windows SmartScreen“未知发布者”警告。Builder 配置与 electron-builder 标准 CI 签名环境保持兼容，因此后续 Release 可以加入基于证书的签名，而无需更改打包方式或更新通道。
+首个公开的 `0.1.2` 安装程序未签名，可能显示 Windows SmartScreen“未知发布者”警告。Builder 配置与 electron-builder 标准 CI 签名环境保持兼容，因此后续 Release 可以加入基于证书的签名，而无需更改打包方式或更新通道。
 
 ## Alternatives considered
 

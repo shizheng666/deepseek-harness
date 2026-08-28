@@ -191,6 +191,7 @@ jobs:
             desktop-dist/DeepSeek-Harness-Desktop-Setup-*-x64.exe \
             desktop-dist/DeepSeek-Harness-Desktop-Setup-*-x64.exe.blockmap \
             desktop-dist/latest.yml \
+            --repo '${{ github.repository }}' \
             --title "DeepSeek Harness Desktop ${{ github.ref_name }}" \
             --generate-notes \
             --latest

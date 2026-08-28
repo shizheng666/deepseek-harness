@@ -6,7 +6,7 @@ DeepSeek Harness Desktop is the Windows x64 desktop distribution of the existing
 
 ## Install and run
 
-Download `DeepSeek-Harness-Desktop-Setup-<version>-x64.exe` from the public [`shizheng666/deepseek-harness` Releases](https://github.com/shizheng666/deepseek-harness/releases), then run the one-click current-user installer. The first published version, `0.1.1`, is unsigned, so Windows SmartScreen may show an unknown-publisher warning. Review the download source before choosing to continue.
+Download `DeepSeek-Harness-Desktop-Setup-<version>-x64.exe` from the public [`shizheng666/deepseek-harness` Releases](https://github.com/shizheng666/deepseek-harness/releases), then run the one-click current-user installer. The first published version, `0.1.2`, is unsigned, so Windows SmartScreen may show an unknown-publisher warning. Review the download source before choosing to continue.
 
 The application starts its packaged runtime as `dsh web --no-open --port 0 --supervised` and loads the authenticated loopback page in a sandboxed Electron window. It uses the normal Harness home without overriding `DSH_HOME`, so the CLI and desktop application share settings, credentials, profiles, and sessions. Only one desktop instance runs at a time.
 

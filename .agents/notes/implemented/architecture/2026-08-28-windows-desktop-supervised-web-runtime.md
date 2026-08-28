@@ -20,7 +20,7 @@ The packaged application checks the public `shizheng666/deepseek-harness` GitHub
 
 SEA deployment changes pnpm's recorded dependency mode and can remove development dependencies from the workspace. The Windows workflow restores the frozen full installation after staging the runtime, then keeps it intact while electron-builder collects production modules instead of allowing pnpm to prune the builder itself. The repository hook installer also checks CI before importing its development-only Lefthook package, so a production-only reconciliation elsewhere can omit development dependencies without weakening normal local hook installation.
 
-The first published `0.1.1` installer is unsigned and may show Windows SmartScreen's unknown-publisher warning. The builder configuration remains compatible with electron-builder's standard CI signing environment so a later release can add certificate-backed signing without changing the packaging or update channel.
+The first published `0.1.2` installer is unsigned and may show Windows SmartScreen's unknown-publisher warning. The builder configuration remains compatible with electron-builder's standard CI signing environment so a later release can add certificate-backed signing without changing the packaging or update channel.
 
 ## Alternatives considered
 

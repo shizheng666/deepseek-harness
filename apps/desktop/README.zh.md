@@ -6,7 +6,7 @@ DeepSeek Harness Desktop 是现有 Web 应用的 Windows x64 桌面发行版。�
 
 ## 安装与运行
 
-从公开的 [`shizheng666/deepseek-harness` Releases](https://github.com/shizheng666/deepseek-harness/releases) 下载 `DeepSeek-Harness-Desktop-Setup-<version>-x64.exe`，再运行面向当前用户的一键安装程序。首个公开版本 `0.1.1` 未签名，因此 Windows SmartScreen 可能显示“未知发布者”警告。选择继续之前，请先确认下载来源。
+从公开的 [`shizheng666/deepseek-harness` Releases](https://github.com/shizheng666/deepseek-harness/releases) 下载 `DeepSeek-Harness-Desktop-Setup-<version>-x64.exe`，再运行面向当前用户的一键安装程序。首个公开版本 `0.1.2` 未签名，因此 Windows SmartScreen 可能显示“未知发布者”警告。选择继续之前，请先确认下载来源。
 
 应用会把随附运行时启动为 `dsh web --no-open --port 0 --supervised`，并在启用沙箱的 Electron 窗口中加载已认证的回环页面。它使用普通 Harness home，不覆盖 `DSH_HOME`，因此 CLI 与桌面应用共享设置、凭据、profile 和会话。同一时间只运行一个桌面实例。
 

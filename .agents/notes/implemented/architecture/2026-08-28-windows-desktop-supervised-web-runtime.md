@@ -18,6 +18,8 @@ The Electron window loads the local authenticated HTTP surface directly. It uses
 
 The packaged application checks the public `shizheng666/deepseek-harness` GitHub Release feed once after successful startup. A newer release downloads in the background; after download, the user chooses immediate restart and installation or installation on normal exit. Manual checks expose errors, while automatic-check failures remain non-blocking. Releases are immutable `desktop-v<version>` tags whose version must exactly match `apps/desktop/package.json`; the Windows workflow publishes the NSIS installer, blockmap, and `latest.yml`. Desktop manifests are excluded from npm release families and version-consistency checks.
 
+Electron-builder's production dependency collection can ask pnpm to reconcile production dependencies in CI. The repository hook installer therefore checks CI before importing its development-only Lefthook package, allowing that reconciliation to omit development dependencies without weakening normal local hook installation.
+
 The first published `0.1.1` installer is unsigned and may show Windows SmartScreen's unknown-publisher warning. The builder configuration remains compatible with electron-builder's standard CI signing environment so a later release can add certificate-backed signing without changing the packaging or update channel.
 
 ## Alternatives considered

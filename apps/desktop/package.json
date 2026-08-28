@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc -b && tsdown",
     "build:icon": "node scripts/build-icon.mjs",
-    "dist:win": "node scripts/build-windows.mjs",
+    "dist:win": "electron-builder --win nsis --x64 --publish never",
     "test": "vitest run --root ../.. apps/desktop/tests"
   },
   "dependencies": {

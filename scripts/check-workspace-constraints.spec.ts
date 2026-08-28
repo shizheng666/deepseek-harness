@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  checkDesktopManifest,
   checkExperimentalDependencyIsolation,
   checkExperimentalManifest,
   expectedDshPackageFiles,
@@ -12,6 +13,37 @@ const experimental: WorkspaceManifest = {
   dir: 'packages/experimental/prototype',
   manifest: { name: '@deepseek-ai/dsh-experimental-prototype', private: true },
 }
+
+describe('desktop workspace constraints', () => {
+  it('requires private independently versioned deployment metadata', () => {
+    expect(checkDesktopManifest({
+      dir: 'apps/desktop',
+      manifest: {
+        name: '@deepseek-ai/dsh-desktop',
+        version: '0.1.0',
+        private: true,
+        type: 'module',
+        main: 'lib/main.js',
+      },
+    })).toEqual([])
+    expect(checkDesktopManifest({
+      dir: 'apps/desktop',
+      manifest: {
+        name: '@deepseek-ai/dsh',
+        version: 'next',
+        private: false,
+        publishConfig: { access: 'public' },
+      },
+    })).toEqual([
+      '@deepseek-ai/dsh: desktop package name must be "@deepseek-ai/dsh-desktop"',
+      '@deepseek-ai/dsh: desktop package must set "private": true',
+      '@deepseek-ai/dsh: desktop package must omit publishConfig',
+      '@deepseek-ai/dsh: desktop version must be publishable semver',
+      '@deepseek-ai/dsh: desktop package must set "type": "module"',
+      '@deepseek-ai/dsh: desktop package must set "main": "lib/main.js"',
+    ])
+  })
+})
 
 describe('experimental workspace constraints', () => {
   it('requires the experimental package-name prefix', () => {

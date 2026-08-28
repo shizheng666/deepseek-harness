@@ -1,0 +1,185 @@
+name: Windows desktop
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/desktop-release.yml
+      - apps/desktop/**
+      - apps/cli/**
+      - apps/web/**
+      - packages/bundle/web-app/**
+      - packages/boot/cmdline/**
+      - python/sdk-runtime/package.json
+      - scripts/build-exe-for-python-sdk.ts
+      - scripts/check-workspace-constraints.ts
+      - scripts/release/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - tsconfig.host.json
+      - tsdown.config.ts
+  push:
+    tags:
+      - desktop-v*
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+permissions:
+  contents: read
+
+env:
+  DSH_TELEMETRY_DISABLED: '1'
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+jobs:
+  build:
+    name: Windows x64 installer
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm-js-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Enable Windows Developer Mode
+        shell: pwsh
+        run: >-
+          reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock"
+          /t REG_DWORD /f /v "AllowDevelopmentWithoutDevLicense" /d "1"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install immutable workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify desktop version and release tag
+        shell: pwsh
+        run: |
+          $version = node -p "require('./apps/desktop/package.json').version"
+          if ('${{ github.ref_type }}' -eq 'tag' -and '${{ github.ref_name }}' -ne "desktop-v$version") {
+            throw "Tag ${{ github.ref_name }} must equal desktop-v$version"
+          }
+
+      - name: Build official workspace
+        run: pnpm run build:official
+
+      - name: Build Windows dsh runtime
+        run: >-
+          pnpm exec tsx scripts/build-exe-for-python-sdk.ts
+          --targets=node24-win-x64
+          --skip-build
+
+      - name: Smoke packaged runtime and stage desktop resources
+        shell: pwsh
+        run: |
+          $runtime = Join-Path $PWD 'dist-exe\deepseek-harness-sdk-runtime-win-x64.exe'
+          $ripgrep = Join-Path $PWD 'dist-exe\deepseek-harness-sdk-runtime-win-x64-rg.exe'
+          node apps/desktop/scripts/smoke-runtime.mjs $runtime
+          New-Item -ItemType Directory -Force apps/desktop/resources/runtime | Out-Null
+          Copy-Item -LiteralPath $runtime apps/desktop/resources/runtime/dsh-runtime.exe
+          Copy-Item -LiteralPath $ripgrep apps/desktop/resources/runtime/dsh-runtime-rg.exe
+
+      - name: Verify deterministic icon
+        shell: pwsh
+        run: |
+          pnpm --filter @deepseek-ai/dsh-desktop build:icon
+          git diff --exit-code -- apps/desktop/assets/icon.ico
+
+      - name: Build NSIS installer
+        shell: pwsh
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+        run: |
+          $version = node -p "require('./apps/desktop/package.json').version"
+          if ($version -eq '0.1.0') {
+            Remove-Item Env:CSC_LINK -ErrorAction SilentlyContinue
+            Remove-Item Env:CSC_KEY_PASSWORD -ErrorAction SilentlyContinue
+          }
+          pnpm --filter @deepseek-ai/dsh-desktop dist:win
+
+      - name: Validate update artifacts
+        shell: pwsh
+        run: |
+          $version = node -p "require('./apps/desktop/package.json').version"
+          $installer = "apps/desktop/dist/DeepSeek-Harness-Desktop-Setup-$version-x64.exe"
+          $blockmap = "$installer.blockmap"
+          foreach ($path in @($installer, $blockmap, 'apps/desktop/dist/latest.yml')) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing desktop artifact $path" }
+          }
+          if (-not (Select-String -LiteralPath apps/desktop/dist/latest.yml -SimpleMatch "version: $version")) {
+            throw 'latest.yml version does not match apps/desktop/package.json'
+          }
+
+      - name: Smoke installer lifecycle
+        shell: pwsh
+        run: |
+          $version = node -p "require('./apps/desktop/package.json').version"
+          $installer = Resolve-Path "apps/desktop/dist/DeepSeek-Harness-Desktop-Setup-$version-x64.exe"
+          Start-Process -FilePath $installer -ArgumentList '/S' -Wait
+          $appExe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Filter 'DeepSeek Harness Desktop.exe' -Recurse | Select-Object -First 1
+          if ($null -eq $appExe) { throw 'Installed desktop executable was not found' }
+          $desktop = Start-Process -FilePath $appExe.FullName -PassThru
+          $runtime = $null
+          for ($attempt = 0; $attempt -lt 60 -and $null -eq $runtime; $attempt++) {
+            Start-Sleep -Milliseconds 500
+            $runtime = Get-CimInstance Win32_Process -Filter "Name = 'dsh-runtime.exe'" |
+              Where-Object { $_.ParentProcessId -eq $desktop.Id } |
+              Select-Object -First 1
+          }
+          if ($null -eq $runtime) { throw 'Installed desktop app did not start its packaged runtime' }
+          $desktop.CloseMainWindow() | Out-Null
+          if (-not $desktop.WaitForExit(15000)) { Stop-Process -Id $desktop.Id -Force }
+          for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            if ($null -eq (Get-Process -Id $runtime.ProcessId -ErrorAction SilentlyContinue)) { break }
+            Start-Sleep -Milliseconds 500
+          }
+          if ($null -ne (Get-Process -Id $runtime.ProcessId -ErrorAction SilentlyContinue)) {
+            throw 'Packaged runtime remained after the desktop app exited'
+          }
+          $uninstaller = Get-ChildItem $appExe.DirectoryName -Filter 'Uninstall*.exe' | Select-Object -First 1
+          if ($null -eq $uninstaller) { throw 'Desktop uninstaller was not found' }
+          Start-Process -FilePath $uninstaller.FullName -ArgumentList '/S' -Wait
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: DeepSeek-Harness-Desktop-${{ github.sha }}-win-x64
+          path: |
+            apps/desktop/dist/DeepSeek-Harness-Desktop-Setup-*-x64.exe
+            apps/desktop/dist/DeepSeek-Harness-Desktop-Setup-*-x64.exe.blockmap
+            apps/desktop/dist/latest.yml
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish GitHub Release
+    if: github.ref_type == 'tag' && github.repository == 'shizheng666/deepseek-harness'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: DeepSeek-Harness-Desktop-${{ github.sha }}-win-x64
+          path: desktop-dist
+
+      - name: Publish immutable desktop release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create '${{ github.ref_name }}' \
+            desktop-dist/DeepSeek-Harness-Desktop-Setup-*-x64.exe \
+            desktop-dist/DeepSeek-Harness-Desktop-Setup-*-x64.exe.blockmap \
+            desktop-dist/latest.yml \
+            --title "DeepSeek Harness Desktop ${{ github.ref_name }}" \
+            --generate-notes \
+            --latest

@@ -1,0 +1,31 @@
+appId: io.github.shizheng666.deepseek-harness-desktop
+productName: DeepSeek Harness Desktop
+asar: true
+npmRebuild: false
+directories:
+  output: dist
+  buildResources: assets
+files:
+  - lib/**/*
+  - package.json
+extraResources:
+  - from: resources/runtime/dsh-runtime.exe
+    to: runtime/dsh-runtime.exe
+  - from: resources/runtime/dsh-runtime-rg.exe
+    to: runtime/dsh-runtime-rg.exe
+win:
+  icon: assets/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: DeepSeek-Harness-Desktop-Setup-${version}-x64.${ext}
+nsis:
+  oneClick: true
+  perMachine: false
+  allowElevation: false
+  deleteAppDataOnUninstall: false
+publish:
+  provider: github
+  owner: shizheng666
+  repo: deepseek-harness

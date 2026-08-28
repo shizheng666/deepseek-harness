@@ -8,7 +8,7 @@
 
 import { Command } from 'commander'
 import type { Context } from '@deepseek-ai/cordis'
-import { parseCmdline } from '@deepseek-ai/dsh-cmdline'
+import { exitOnStdinEnd, parseCmdline } from '@deepseek-ai/dsh-cmdline'
 
 /** Stable Cordis plugin name. */
 export const name = 'web-startup'
@@ -27,6 +27,8 @@ export interface WebStartupValues {
   host?: string
   /** `--port`, absent when the invocation did not name one. */
   port?: number
+  /** Whether stdin EOF requests a bounded successful shutdown. */
+  supervised: boolean
   /** Explicit `--trusted-host` authorities, in argument order. */
   trustedHosts: string[]
 }
@@ -36,6 +38,7 @@ interface WebOptions {
   host?: string
   open: boolean
   port?: string
+  supervised?: boolean
   trustedHost?: string[]
 }
 
@@ -51,12 +54,14 @@ function webCommand(): Command {
     .option('--host <host>', 'bind host')
     .option('--no-open', 'do not open the Web UI in the default browser')
     .option('--port <port>', 'listen port; pass 0 to let the OS pick a free one')
+    .option('--supervised', 'exit cleanly when the supervising launcher closes stdin')
     .option('--trusted-host <authority...>', 'extra authority the /api browser-trust fence accepts (host or host:port; repeatable)')
     .addHelpText('after', `
 Examples:
   dsh --profile web                          serve on the composed host and port
   dsh --profile web --no-open                serve without opening a browser
   dsh --profile web --port 8080              serve on another port
+  dsh --profile web --no-open --supervised   stop when the launcher closes stdin
 `)
 }
 
@@ -81,8 +86,10 @@ export function apply(ctx: Context): void {
       openBrowser: options.open,
       ...options.host !== undefined && { host: options.host },
       ...options.port !== undefined && { port: Number(options.port) },
+      supervised: options.supervised === true,
       trustedHosts: options.trustedHost ?? [],
     } satisfies WebStartupValues)
+    if (options.supervised === true) exitOnStdinEnd(ctx, 'web-startup.supervised')
   })
   parseCmdline(ctx, program)
 }

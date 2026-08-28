@@ -6,6 +6,7 @@
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
@@ -27,6 +28,7 @@ afterEach(async () => {
   for (const dispose of disposers.splice(0)) await dispose()
   internals.stdout = process.stdout
   internals.stderr = process.stderr
+  internals.stdin = process.stdin
 })
 
 /**
@@ -37,6 +39,7 @@ afterEach(async () => {
 async function bootProvider(args: string[]): Promise<{
   values: WebStartupValues | undefined
   observed: Observed
+  stdin: PassThrough
 }> {
   const dir = mkdtempSync(join(tmpdir(), 'dsh-web-startup-'))
   const observed: Observed = { exits: [], out: '' }
@@ -58,6 +61,7 @@ export const apply = ctx => globalThis.__webStartupApply(ctx)
     "    host: !!js ctx.webStartup.host ?? '127.0.0.1'",
     '    openBrowser: !!js ctx.webStartup.openBrowser',
     '    port: !!js ctx.webStartup.port ?? 3080',
+    '    supervised: !!js ctx.webStartup.supervised',
     '    trustedHosts: !!js ctx.webStartup.trustedHosts',
     '- id: provider',
     `  name: ${pathToFileURL(join(dir, 'provider.mjs')).href}`,
@@ -66,6 +70,8 @@ export const apply = ctx => globalThis.__webStartupApply(ctx)
   const observing = { write: (chunk: string) => { observed.out += chunk; return true } }
   internals.stdout = observing
   internals.stderr = observing
+  const stdin = new PassThrough()
+  internals.stdin = stdin
   const globals = globalThis as unknown as {
     __webStartupApply: typeof apply
     __webStartupObserved: Observed
@@ -76,13 +82,18 @@ export const apply = ctx => globalThis.__webStartupApply(ctx)
   const ctx = new Context()
   await ctx.plugin(Loader)
   ctx.loader.builtins.include = Include
-  provideCmdline(ctx, { args, exit: code => void observed.exits.push(code) })
+  provideCmdline(ctx, {
+    args,
+    exit: code => void observed.exits.push(code),
+    ready: { onReady: (listener) => { listener(); return () => {} } },
+  })
   await ctx.loader.create({ name: 'cordis:include', config: { path: pathToFileURL(join(dir, 'cordis.yml')).href } })
   await ctx.loader.await()
   disposers.push(async () => { await ctx.fiber.dispose() })
   return {
     values: ctx.get(WEB_STARTUP_SERVICE) as WebStartupValues | undefined,
     observed,
+    stdin,
   }
 }
 
@@ -99,6 +110,7 @@ describe('web command-line provider', () => {
       host: '127.0.0.1',
       openBrowser: false,
       port: 8080,
+      supervised: false,
       trustedHosts: ['lab.internal', 'lab-2.internal', '10.0.0.9'],
     })
     expect(observed.readerConfig).toEqual(values)
@@ -107,19 +119,38 @@ describe('web command-line provider', () => {
 
   it('leaves deployment values to each consumer when flags omit them', async () => {
     const { values, observed } = await bootProvider([])
-    expect(values).toEqual({ openBrowser: true, trustedHosts: [] })
+    expect(values).toEqual({ openBrowser: true, supervised: false, trustedHosts: [] })
     expect(observed.readerConfig).toEqual({
       host: '127.0.0.1',
       openBrowser: true,
       port: 3080,
+      supervised: false,
       trustedHosts: [],
     })
+  })
+
+  it('requests successful shutdown when a supervisor closes stdin', async () => {
+    const { values, observed, stdin } = await bootProvider(['--no-open', '--supervised'])
+    expect(values).toMatchObject({ openBrowser: false, supervised: true })
+    stdin.resume()
+    stdin.end()
+    await new Promise(resolve => setImmediate(resolve))
+    expect(observed.exits).toEqual([0])
+  })
+
+  it('keeps ordinary Web launches independent of stdin EOF', async () => {
+    const { observed, stdin } = await bootProvider(['--no-open'])
+    stdin.resume()
+    stdin.end()
+    await new Promise(resolve => setImmediate(resolve))
+    expect(observed.exits).toEqual([])
   })
 
   it('prints its own help and leaves the consumer pending', async () => {
     const { values, observed } = await bootProvider(['--help'])
     expect(observed.out).toContain('dsh --profile web')
     expect(observed.out).toContain('--no-open')
+    expect(observed.out).toContain('--supervised')
     expect(observed.out).toContain('--trusted-host')
     expect(values).toBeUndefined()
     expect(observed.readerConfig).toBeUndefined()

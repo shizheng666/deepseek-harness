@@ -52,8 +52,10 @@ const publishedRepositoryUrl = 'git+https://github.com/deepseek-ai/deepseek-harn
 const experimentalPackageDirectory = /^packages\/experimental\/[^/]+$/
 /** npm namespace reserved for private experimental packages. */
 const experimentalPackageNamePrefix = '@deepseek-ai/dsh-experimental-'
+/** Private deployment app with an independent desktop release sequence. */
+const desktopAppDirectory = 'apps/desktop'
 /** Directories whose packages this repository publishes: one release member each. */
-const releaseMemberDirectory = /^(?:packages\/(?!experimental\/)[^/]+\/[^/]+|apps\/[^/]+|vendor\/[^/]+)$/
+const releaseMemberDirectory = /^(?:packages\/(?!experimental\/)[^/]+\/[^/]+|apps\/(?!desktop$)[^/]+|vendor\/[^/]+)$/
 const localArtifactDirs = new Set(['node_modules'])
 const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh': ['lib/*.js'],
@@ -268,13 +270,34 @@ export function checkExperimentalManifest({ dir, manifest }: WorkspaceManifest):
   return errors
 }
 
+/** Desktop deployment metadata is private and versioned outside npm releases. */
+export function checkDesktopManifest({ dir, manifest }: WorkspaceManifest): string[] {
+  if (dir !== desktopAppDirectory) return []
+  const label = manifest.name ?? dir
+  const errors: string[] = []
+  if (manifest.name !== '@deepseek-ai/dsh-desktop') {
+    errors.push(`${label}: desktop package name must be "@deepseek-ai/dsh-desktop"`)
+  }
+  if (manifest.private !== true) errors.push(`${label}: desktop package must set "private": true`)
+  if (manifest.publishConfig !== undefined) errors.push(`${label}: desktop package must omit publishConfig`)
+  if (manifest.version === undefined || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(manifest.version)) {
+    errors.push(`${label}: desktop version must be publishable semver`)
+  }
+  if (manifest.type !== 'module') errors.push(`${label}: desktop package must set "type": "module"`)
+  if (manifest.main !== 'lib/main.js') errors.push(`${label}: desktop package must set "main": "lib/main.js"`)
+  return errors
+}
+
 /**
  * Check one workspace manifest against publication and dsh-package policy.
  * @param workspace - package directory and parsed manifest.
  * @returns path-qualified policy violations.
  */
 export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): string[] {
-  const errors = checkExperimentalManifest({ dir, manifest })
+  const errors = [
+    ...checkExperimentalManifest({ dir, manifest }),
+    ...checkDesktopManifest({ dir, manifest }),
+  ]
   const label = manifest.name ?? dir
   const isLandlockPackageDir = dir.startsWith('native/landlock-run/packages/')
   const isPublicLandlockPackage = isLandlockPackageDir
@@ -333,7 +356,9 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
     }
   }
 
-  if (dir.startsWith('apps/') && manifest.name?.startsWith('@deepseek-ai/')) {
+  if (dir.startsWith('apps/')
+    && dir !== desktopAppDirectory
+    && manifest.name?.startsWith('@deepseek-ai/')) {
     const expectedFiles = appPackageFiles[manifest.name]
     if (expectedFiles === undefined) {
       errors.push(`${label}: app package has no publication files policy`)

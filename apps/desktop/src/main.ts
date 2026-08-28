@@ -11,7 +11,7 @@ import {
   shell,
   type MenuItemConstructorOptions,
 } from 'electron'
-import { autoUpdater } from 'electron-updater'
+import electronUpdater from 'electron-updater'
 import { focusExistingWindow, startWithRetry } from './lifecycle.ts'
 import { createDesktopTranslator, type DesktopTranslator } from './locale.ts'
 import { classifyNavigation } from './navigation.ts'
@@ -22,6 +22,8 @@ import {
 } from './updater.ts'
 
 app.enableSandbox()
+
+const { autoUpdater } = electronUpdater
 
 const repositoryRoot = fileURLToPath(new URL('../../..', import.meta.url))
 let mainWindow: BrowserWindow | undefined

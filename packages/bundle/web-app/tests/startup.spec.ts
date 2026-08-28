@@ -132,7 +132,6 @@ describe('web command-line provider', () => {
   it('requests successful shutdown when a supervisor closes stdin', async () => {
     const { values, observed, stdin } = await bootProvider(['--no-open', '--supervised'])
     expect(values).toMatchObject({ openBrowser: false, supervised: true })
-    stdin.resume()
     stdin.end()
     await new Promise(resolve => setImmediate(resolve))
     expect(observed.exits).toEqual([0])

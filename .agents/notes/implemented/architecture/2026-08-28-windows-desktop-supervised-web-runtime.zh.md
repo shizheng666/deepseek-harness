@@ -12,7 +12,7 @@ DeepSeek Harness 已有浏览器 Web 表层与 Windows 独立可执行文件，�
 
 `apps/desktop` 是使用独立桌面版本的私有 Electron 应用。其 Windows x64 NSIS 包把现有独立运行时作为 `runtime/dsh-runtime.exe` 随附，并包含对应 ripgrep 伴随文件。Electron 将该可执行文件启动为 `dsh web --no-open --port 0 --supervised`；可执行文件仍从普通 `dsh` 启动器进入 `web` profile，因此桌面包不会挂载第二套 Cordis 应用树。桌面进程不覆盖 `DSH_HOME`，所以与普通 CLI 安装共享设置、凭据、profile 和会话。
 
-Web 应用拥有 `--supervised`。带该 flag 时，stdin EOF 会进入现有进程优雅关闭流程；普通 `dsh web` 启动会忽略 stdin EOF。应用退出时，Electron 关闭子进程 stdin，等待 5 秒；运行时仍未退出时再终止 Windows 进程树。只有 stdout 在 30 秒内准确宣告一个带 token 认证的 `http://127.0.0.1:<port>/` URL，运行时启动才算成功。Token 仅保留在内存中，并从所有留存诊断中脱敏。启动失败或运行时意外退出时，只提供一次由用户控制的“重试”或“退出”选择，不进入自动重启循环。
+Web 应用拥有 `--supervised`。带该 flag 时，它会丢弃并恢复原本未使用的 stdin 流，使 EOF 进入现有进程优雅关闭流程；协议应用让 stdin 保持暂停，直至其传输层读取输入，而普通 `dsh web` 启动会忽略 stdin EOF。应用退出时，Electron 关闭子进程 stdin，等待 5 秒；运行时仍未退出时再终止 Windows 进程树。只有 stdout 在 30 秒内准确宣告一个带 token 认证的 `http://127.0.0.1:<port>/` URL，运行时启动才算成功。Token 仅保留在内存中，并从所有留存诊断中脱敏。启动失败或运行时意外退出时，只提供一次由用户控制的“重试”或“退出”选择，不进入自动重启循环。
 
 Electron 窗口直接加载本地已认证 HTTP 表层。它启用沙箱并关闭 Node 集成，不提供 preload、renderer 自有桌面代码或 IPC API。所有权限请求都被拒绝。导航只允许留在已宣告的运行时 origin；外部 HTTPS 链接交给系统浏览器，其他所有 origin 与协议则被拒绝。重复启动时，单实例锁会聚焦现有窗口。
 

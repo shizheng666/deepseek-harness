@@ -92,10 +92,18 @@ export function provideCmdline(ctx: Context, host: CmdlineHost): void {
 export interface AppStdin {
   /** Whether EOF arrived before the application bound its listener. */
   readonly readableEnded: boolean
+  /** Switch the stream to flowing mode so an app without a protocol transport observes EOF. */
+  resume(): unknown
   /** Subscribe once to stdin EOF. */
   once(event: 'end', listener: () => void): unknown
   /** Remove a previously installed stdin EOF listener. */
   off(event: 'end', listener: () => void): unknown
+}
+
+/** Input behavior for an application that exits when its supervisor closes stdin. */
+export interface StdinEndOptions {
+  /** Discard stdin bytes and resume the stream so an application without an input protocol observes EOF. */
+  consumeInput?: boolean
 }
 
 /** Process streams used by app command lines and stdio lifetime binding; tests substitute them. */
@@ -114,13 +122,15 @@ export const internals: {
  * {@link AppReady} commits. A startup rejection therefore remains the process
  * outcome when it races EOF. The caller invokes this only after its command
  * action accepts the invocation, so help and usage failures start no transport
- * lifecycle. This listener does not read or resume stdin: the protocol
- * transport owns input and receives bytes buffered before it mounts. Disposal
+ * lifecycle. Protocol applications leave `consumeInput` false so their
+ * transport receives buffered bytes; an application with no stdin protocol
+ * sets it true so Node emits EOF from the otherwise paused stream. Disposal
  * removes the EOF and readiness listeners.
  * @param ctx - app plugin context carrying the launcher's exit request.
  * @param label - effect label naming the owning application.
+ * @param options - input behavior for the application.
  */
-export function exitOnStdinEnd(ctx: Context, label: string): void {
+export function exitOnStdinEnd(ctx: Context, label: string, options: StdinEndOptions = {}): void {
   const exit = ctx.get('appExit')
   const ready = ctx.get('appReady')
   if (exit === undefined || ready === undefined) {
@@ -142,6 +152,7 @@ export function exitOnStdinEnd(ctx: Context, label: string): void {
   }, label)
   stdin.once('end', onEnd)
   if (stdin.readableEnded) queueMicrotask(onEnd)
+  else if (options.consumeInput === true) stdin.resume()
 }
 
 /**

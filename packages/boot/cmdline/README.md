@@ -37,7 +37,7 @@ The launcher makes three things available to your app:
 
 An app launched with no arguments sees an empty list — that is the honest answer, not a missing value.
 
-`exitOnStdinEnd(ctx, label)` binds a successfully started stdio application's EOF to `ctx.appExit(0)`. It never reads or resumes stdin, so a protocol transport receives bytes buffered before it mounts; startup rejection wins over a racing EOF, and the owning fiber removes both pending listeners.
+`exitOnStdinEnd(ctx, label)` binds a successfully started application's stdin EOF to `ctx.appExit(0)`. It leaves stdin paused by default, so a protocol transport receives bytes buffered before it mounts. An application without a stdin protocol passes `{ consumeInput: true }` to discard input and resume the stream, ensuring Node emits EOF when its supervisor closes the pipe. Startup rejection wins over a racing EOF, and the owning fiber removes both pending listeners.
 
 ### Parsing your flags
 

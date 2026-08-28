@@ -37,7 +37,7 @@ kind: "package-library"
 
 没有参数的启动会看到空列表——这是诚实的答案，而不是缺失的值。
 
-`exitOnStdinEnd(ctx, label)` 把已成功启动的 stdio 应用 EOF 绑定到 `ctx.appExit(0)`。它绝不读取或恢复 stdin，因此协议传输会收到挂载前已缓冲的字节；启动拒绝优先于竞态 EOF，拥有它的 fiber 会移除两项待处理监听。
+`exitOnStdinEnd(ctx, label)` 把已成功启动应用的 stdin EOF 绑定到 `ctx.appExit(0)`。默认情况下，它让 stdin 保持暂停，因此协议传输会收到挂载前已缓冲的字节。没有 stdin 协议的应用传入 `{ consumeInput: true }`，以丢弃输入并恢复流，确保监督程序关闭管道时 Node 会发出 EOF。启动拒绝优先于竞态 EOF，拥有它的 fiber 会移除两项待处理监听。
 
 ### 解析你的 flag
 

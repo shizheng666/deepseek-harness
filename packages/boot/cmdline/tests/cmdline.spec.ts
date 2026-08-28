@@ -67,6 +67,12 @@ afterEach(async () => {
 /** In-memory stdin whose end edge and ended-before-bind state are controllable. */
 class TestStdin extends EventEmitter {
   readableEnded = false
+  resumeCalls = 0
+
+  resume(): this {
+    this.resumeCalls += 1
+    return this
+  }
 
   end(): void {
     this.readableEnded = true
@@ -333,6 +339,18 @@ describe('exitOnStdinEnd', () => {
 
     expect(received).toBe(frame)
     expect(exits).toEqual([0])
+    await ctx.fiber.dispose()
+  })
+
+  it('resumes stdin when an application has no input protocol', async () => {
+    const ctx = new Context()
+    const stdin = new TestStdin()
+    internals.stdin = stdin
+    provideCmdline(ctx, { args: [], exit: () => {}, ready: readyApp })
+
+    exitOnStdinEnd(ctx, 'test.stdin', { consumeInput: true })
+
+    expect(stdin.resumeCalls).toBe(1)
     await ctx.fiber.dispose()
   })
 

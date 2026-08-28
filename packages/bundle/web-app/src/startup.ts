@@ -89,7 +89,7 @@ export function apply(ctx: Context): void {
       supervised: options.supervised === true,
       trustedHosts: options.trustedHost ?? [],
     } satisfies WebStartupValues)
-    if (options.supervised === true) exitOnStdinEnd(ctx, 'web-startup.supervised')
+    if (options.supervised === true) exitOnStdinEnd(ctx, 'web-startup.supervised', { consumeInput: true })
   })
   parseCmdline(ctx, program)
 }

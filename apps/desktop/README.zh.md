@@ -24,8 +24,8 @@ git fetch origin
 git merge origin/master
 # update apps/desktop/package.json
 git push fork codex/desktop-windows
-git tag desktop-v0.1.1
-git push fork desktop-v0.1.1
+git tag desktop-v0.1.3
+git push fork desktop-v0.1.3
 ```
 
 ## 开发
@@ -38,6 +38,6 @@ pnpm --filter @deepseek-ai/dsh-desktop build
 pnpm --filter @deepseek-ai/dsh-desktop build:icon
 ```
 
-Windows 工作流拥有可分发构建。它会构建正式 workspace、创建 Windows x64 独立运行时、运行运行时冒烟测试、暂存 `dsh-runtime.exe` 及其 ripgrep 伴随文件、构建 NSIS 目标、校验更新元数据，并验证静默安装、启动、进程清理和卸载。没有配置 `WINDOWS_CSC_LINK` 的构建保持未签名；后续 Release 可以使用 `WINDOWS_CSC_LINK` 与 `WINDOWS_CSC_KEY_PASSWORD` 仓库 secret。Pull Request 与手动运行只上传临时产物，不创建 Release；只有公开 fork 中的 `desktop-v*` 标签会发布 Release。
+Windows 工作流拥有可分发构建。它会构建正式 workspace、创建 Windows x64 独立运行时、运行运行时冒烟测试、暂存 `dsh-runtime.exe` 及其 ripgrep 伴随文件、构建 NSIS 目标、校验更新元数据，并验证静默安装、已安装 Electron renderer 中的组合客户端启动、进程清理和卸载。客户端冒烟测试要求非空启动图进入模块加载器 live 状态，并拒绝插件加载失败页面。没有配置 `WINDOWS_CSC_LINK` 的构建保持未签名；后续 Release 可以使用 `WINDOWS_CSC_LINK` 与 `WINDOWS_CSC_KEY_PASSWORD` 仓库 secret。Pull Request 与手动运行只上传临时产物，不创建 Release；只有公开 fork 中的 `desktop-v*` 标签会发布 Release。
 
 在 Windows 上进行本地 Electron 开发时，先构建 workspace 与独立运行时；仅在运行时不位于默认路径时设置 `DSH_DESKTOP_RUNTIME_PATH`。桌面进程只在内存中保存运行时 token，并从诊断信息中脱敏；它只接受宣告的 `http://127.0.0.1:<port>/` origin，拒绝权限请求与其他导航，并通过系统浏览器打开外部 HTTPS 链接。应用不提供 renderer、preload 或桌面 IPC API。

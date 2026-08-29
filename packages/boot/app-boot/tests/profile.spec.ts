@@ -666,6 +666,10 @@ describe('healProfilesModuleFallback', () => {
       './legacy/': './legacy/',
       './types': { types: './feature.d.ts' },
     }
+    bundleManifest.dsh = {
+      ...bundleManifest.dsh as Record<string, unknown>,
+      client: { platform: 'web', immediately: true },
+    }
     writeFileSync(join(bundleDir, 'package.json'), JSON.stringify(bundleManifest))
     writeFileSync(join(bundleDir, 'feature.js'), 'export const feature = "proxied"\n')
     const home = tmp()
@@ -678,16 +682,32 @@ describe('healProfilesModuleFallback', () => {
       const proxyManifest = JSON.parse(readFileSync(join(proxy, 'package.json'), 'utf8')) as {
         version: unknown
         exports: unknown
-        dsh: { moduleFallback: { targets: Record<string, unknown> } }
+        dsh: {
+          bundle: unknown
+          client: unknown
+          moduleFallback: { targets: Record<string, unknown> }
+        }
       }
       expect(proxyManifest).toMatchObject({
         version: '0.0.0',
         exports: { '.': './entry-0.js', './feature': './entry-1.js' },
+        dsh: {
+          bundle: { patch: './cordis.patch.yml' },
+          client: { platform: 'web', immediately: true },
+        },
       })
       expect(proxyManifest.dsh.moduleFallback.targets['.']).toEqual(expect.stringContaining('/bundle-a/index.js'))
       await expect(import(join(proxy, 'entry-0.js'))).resolves.toMatchObject({ packageName: 'bundle-a' })
       await expect(import(join(proxy, 'entry-1.js'))).resolves.toMatchObject({ feature: 'proxied' })
+      writeFileSync(join(proxy, 'package.json'), JSON.stringify({
+        ...proxyManifest,
+        dsh: { moduleFallback: proxyManifest.dsh.moduleFallback },
+      }))
       await healProfilesModuleFallback({ installAnchor: anchor, home })
+      const repairedManifest = JSON.parse(readFileSync(join(proxy, 'package.json'), 'utf8')) as {
+        dsh: { client?: unknown }
+      }
+      expect(repairedManifest.dsh.client).toEqual({ platform: 'web', immediately: true })
     } finally {
       delete (process as NodeJS.Process & { pkg?: unknown }).pkg
     }

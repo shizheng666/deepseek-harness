@@ -9,6 +9,7 @@ on:
       - apps/web/**
       - packages/bundle/web-app/**
       - packages/boot/cmdline/**
+      - packages/boot/app-boot/**
       - python/sdk-runtime/package.json
       - scripts/build-exe-for-python-sdk.ts
       - scripts/check-workspace-constraints.ts
@@ -132,7 +133,11 @@ jobs:
           Start-Process -FilePath $installer -ArgumentList '/S' -Wait
           $appExe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Filter 'DeepSeek Harness Desktop.exe' -Recurse | Select-Object -First 1
           if ($null -eq $appExe) { throw 'Installed desktop executable was not found' }
-          $desktop = Start-Process -FilePath $appExe.FullName -PassThru
+          $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+          $listener.Start()
+          $debugPort = $listener.LocalEndpoint.Port
+          $listener.Stop()
+          $desktop = Start-Process -FilePath $appExe.FullName -ArgumentList "--remote-debugging-port=$debugPort" -PassThru
           $runtime = $null
           for ($attempt = 0; $attempt -lt 60 -and $null -eq $runtime; $attempt++) {
             Start-Sleep -Milliseconds 500
@@ -147,6 +152,7 @@ jobs:
             Start-Sleep -Milliseconds 500
           }
           if ($desktop.MainWindowHandle -eq 0) { throw 'Installed desktop app did not create its main window' }
+          node apps/desktop/scripts/smoke-installed.mjs $debugPort
           if (-not $desktop.CloseMainWindow()) { throw 'Installed desktop main window did not accept close' }
           if (-not $desktop.WaitForExit(15000)) { Stop-Process -Id $desktop.Id -Force }
           for ($attempt = 0; $attempt -lt 20; $attempt++) {

@@ -20,6 +20,8 @@ Electron 窗口直接加载本地已认证 HTTP 表层。它启用沙箱并关�
 
 SEA 部署会改变 pnpm 记录的依赖模式，并可能从 workspace 删除开发依赖。Windows 工作流会在暂存运行时后根据冻结锁文件恢复完整安装，然后在 electron-builder 收集生产模块时保持该安装，不允许 pnpm 提前裁掉 builder 本身。仓库钩子安装器也会先检查 CI，再导入仅用于开发的 Lefthook 包，使其他场景的纯生产依赖同步可以省略开发依赖，同时不削弱本地正常安装钩子的行为。
 
+已安装应用冒烟测试会使用回环 DevTools endpoint 启动 Electron，并在安装后检查真实 renderer。验收要求非空组合客户端图进入模块加载器 live 状态，并拒绝插件加载失败页面；仅创建窗口不代表桌面启动成功。
+
 首个公开的 `0.1.2` 安装程序未签名，可能显示 Windows SmartScreen“未知发布者”警告。Builder 配置与 electron-builder 标准 CI 签名环境保持兼容，因此后续 Release 可以加入基于证书的签名，而无需更改打包方式或更新通道。
 
 ## Alternatives considered
@@ -36,6 +38,6 @@ SEA 部署会改变 pnpm 记录的依赖模式，并可能从 workspace 删除�
 
 ## Consequences
 
-Windows 用户获得一个不需要 Node.js 或源码 checkout 的当前用户级安装程序，并与 CLI 使用同一份本地数据。桌面运行时与浏览器行为继续属于同一 Web 应用，Electron 仅负责监督、导航策略、对话框、菜单和更新。只拉取源码不会影响已安装客户端；每项客户端可见改动都需要更高桌面版本与新标签。公开发布仓库与首版未签名是部署依赖，macOS、Linux、ARM64、定时更新轮询和桌面专用 renderer 则不属于本决策。
+Windows 用户获得一个不需要 Node.js 或源码 checkout 的当前用户级安装程序，并与 CLI 使用同一份本地数据。桌面运行时与浏览器行为继续属于同一 Web 应用，Electron 仅负责监督、导航策略、对话框、菜单和更新。只拉取源码不会影响已安装客户端；每项客户端可见改动都需要更高桌面版本与新标签。Release CI 会证明已安装 renderer 进入组合应用，而不是停在错误外壳。公开发布仓库与首版未签名是部署依赖，macOS、Linux、ARM64、定时更新轮询和桌面专用 renderer 则不属于本决策。
 
 运行时产物继续遵循[单文件可执行发行决策](2026-07-10-single-file-executable-sdk-runtime-distribution.zh.md)，就绪 URL 遵循 [`dsh web` 就绪页面决策](../feature/2026-08-12-open-ready-web-ui.zh.md)，Web 路由归属继续遵循 [Web 传输层决策](2026-07-24-web-config-tree-boot-and-transport-layering.zh.md)。

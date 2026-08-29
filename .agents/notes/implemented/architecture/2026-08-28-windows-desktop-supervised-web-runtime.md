@@ -20,6 +20,8 @@ The packaged application checks the public `shizheng666/deepseek-harness` GitHub
 
 SEA deployment changes pnpm's recorded dependency mode and can remove development dependencies from the workspace. The Windows workflow restores the frozen full installation after staging the runtime, then keeps it intact while electron-builder collects production modules instead of allowing pnpm to prune the builder itself. The repository hook installer also checks CI before importing its development-only Lefthook package, so a production-only reconciliation elsewhere can omit development dependencies without weakening normal local hook installation.
 
+The installed-application smoke launches Electron with a loopback DevTools endpoint and inspects the real renderer after installation. Acceptance requires a non-empty assembled client graph to reach the module loader's live state and rejects the plugin-load failure page; window creation alone is not a successful desktop boot.
+
 The first published `0.1.2` installer is unsigned and may show Windows SmartScreen's unknown-publisher warning. The builder configuration remains compatible with electron-builder's standard CI signing environment so a later release can add certificate-backed signing without changing the packaging or update channel.
 
 ## Alternatives considered
@@ -36,6 +38,6 @@ The first published `0.1.2` installer is unsigned and may show Windows SmartScre
 
 ## Consequences
 
-Windows users receive one current-user installer that needs neither Node.js nor a source checkout and uses the same local data as the CLI. Desktop runtime and browser behavior remain one Web application, with Electron limited to supervision, navigation policy, dialogs, menus, and updates. Pulling source alone has no effect on installed clients; every client-visible change needs a higher desktop version and a new tag. The public release repository and unsigned first version are deployment dependencies, while macOS, Linux, ARM64, periodic update polling, and a desktop-specific renderer remain outside this decision.
+Windows users receive one current-user installer that needs neither Node.js nor a source checkout and uses the same local data as the CLI. Desktop runtime and browser behavior remain one Web application, with Electron limited to supervision, navigation policy, dialogs, menus, and updates. Pulling source alone has no effect on installed clients; every client-visible change needs a higher desktop version and a new tag. Release CI proves the installed renderer reaches the assembled application rather than an error shell. The public release repository and unsigned first version are deployment dependencies, while macOS, Linux, ARM64, periodic update polling, and a desktop-specific renderer remain outside this decision.
 
 The runtime artifact continues to follow the [single-file executable distribution decision](2026-07-10-single-file-executable-sdk-runtime-distribution.md), the readiness URL follows the [`dsh web` ready-page decision](../feature/2026-08-12-open-ready-web-ui.md), and Web route ownership remains with the [Web transport-layer decision](2026-07-24-web-config-tree-boot-and-transport-layering.md).

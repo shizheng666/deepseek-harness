@@ -24,8 +24,8 @@ git fetch origin
 git merge origin/master
 # update apps/desktop/package.json
 git push fork codex/desktop-windows
-git tag desktop-v0.1.1
-git push fork desktop-v0.1.1
+git tag desktop-v0.1.3
+git push fork desktop-v0.1.3
 ```
 
 ## Development
@@ -38,6 +38,6 @@ pnpm --filter @deepseek-ai/dsh-desktop build
 pnpm --filter @deepseek-ai/dsh-desktop build:icon
 ```
 
-The Windows workflow owns the distributable build. It builds the official workspace, creates the Windows x64 standalone runtime, runs the runtime smoke test, stages `dsh-runtime.exe` and its ripgrep companion, builds the NSIS target, validates update metadata, and exercises silent install, launch, process cleanup, and uninstall. Builds without `WINDOWS_CSC_LINK` are unsigned; later releases can use `WINDOWS_CSC_LINK` and `WINDOWS_CSC_KEY_PASSWORD` repository secrets. Pull requests and manual runs upload temporary artifacts without creating a Release; only `desktop-v*` tags in the public fork publish a Release.
+The Windows workflow owns the distributable build. It builds the official workspace, creates the Windows x64 standalone runtime, runs the runtime smoke test, stages `dsh-runtime.exe` and its ripgrep companion, builds the NSIS target, validates update metadata, and exercises silent install, assembled client boot in the installed Electron renderer, process cleanup, and uninstall. The client smoke requires a non-empty boot graph to reach the live module-loader state and rejects the plugin-load failure page. Builds without `WINDOWS_CSC_LINK` are unsigned; later releases can use `WINDOWS_CSC_LINK` and `WINDOWS_CSC_KEY_PASSWORD` repository secrets. Pull requests and manual runs upload temporary artifacts without creating a Release; only `desktop-v*` tags in the public fork publish a Release.
 
 For local Electron development on Windows, build the workspace and standalone runtime, then set `DSH_DESKTOP_RUNTIME_PATH` only when a non-default runtime path is required. The desktop process keeps the runtime token in memory, redacts it from diagnostics, accepts only the announced `http://127.0.0.1:<port>/` origin, denies permission requests and other navigation, and opens external HTTPS links in the system browser. There is no renderer, preload, or desktop IPC API.

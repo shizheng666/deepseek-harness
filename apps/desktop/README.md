@@ -24,8 +24,8 @@ git fetch origin
 git merge origin/master
 # update apps/desktop/package.json
 git push fork codex/desktop-windows
-git tag desktop-v0.1.3
-git push fork desktop-v0.1.3
+git tag desktop-v0.1.4
+git push fork desktop-v0.1.4
 ```
 
 ## Development

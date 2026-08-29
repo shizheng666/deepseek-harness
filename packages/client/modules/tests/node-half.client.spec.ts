@@ -419,6 +419,46 @@ describe('client bundle activation', () => {
     expect(construct([currentName]).graph().entries.map(entry => entry.id)).toEqual([currentName])
   })
 
+  it('reads client bundle bytes from the original target behind a packaged profile proxy', async () => {
+    const packageName = '@fixture/packaged-proxy'
+    root ??= realpathSync(mkdtempSync(join(tmpdir(), 'dsh-client-modules-')))
+    const originalPath = join(root, 'snapshot', 'client.js')
+    mkdirSync(dirname(originalPath), { recursive: true })
+    writeFileSync(originalPath, 'module.exports = { originalTarget: true }\n')
+    const proxyPath = writePackage(packageName, {
+      dsh: {
+        client: { platform: 'web' },
+        moduleFallback: { targets: { './client': pathToFileURL(originalPath).href } },
+      },
+    })
+    mkdirSync(dirname(proxyPath), { recursive: true })
+    writeFileSync(proxyPath, `export * from ${JSON.stringify(pathToFileURL(originalPath).href)}\n`)
+
+    const { service, route } = constructWithRoute([packageName])
+
+    expect(service.clientPath(packageName)).toBe(originalPath)
+    const response = await routeRequest(route, service.graph().batches[0]!.url)
+    expect(response.status).toBe(200)
+    expect(response.body.toString()).toContain('originalTarget: true')
+    expect(response.body.toString()).not.toContain('export * from')
+  })
+
+  it.each([
+    null,
+    { targets: null },
+    { targets: {} },
+    { targets: { './client': 'https://example.test/client.js' } },
+  ])('rejects malformed packaged proxy client target %#', (moduleFallback) => {
+    const packageName = '@fixture/malformed-packaged-proxy'
+    const clientPath = writePackage(packageName, {
+      dsh: { client: { platform: 'web' }, moduleFallback },
+    })
+    mkdirSync(dirname(clientPath), { recursive: true })
+    writeFileSync(clientPath, 'module.exports = {}\n')
+
+    expect(() => construct([packageName])).toThrow(`client-modules: ${packageName} dsh.moduleFallback`)
+  })
+
   it('groups missing bundles under one source-build instruction with a package/path list', () => {
     const firstName = '@fixture/missing-first'
     const secondName = '@fixture/missing-second'

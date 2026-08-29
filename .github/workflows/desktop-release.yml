@@ -10,6 +10,7 @@ on:
       - packages/bundle/web-app/**
       - packages/boot/cmdline/**
       - packages/boot/app-boot/**
+      - packages/client/modules/**
       - python/sdk-runtime/package.json
       - scripts/build-exe-for-python-sdk.ts
       - scripts/check-workspace-constraints.ts
